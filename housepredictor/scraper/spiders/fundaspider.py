@@ -3,12 +3,13 @@ import json
 
 import scrapy
 from scrapy import Request
+import re
 
-from housepredictor.scraper.items import FundaItem
+#from housepredictor.scraper.items import FundaItem
 
 
-def get_search_url(api_key='16F03929-0DB2-4FA7-8B55-182D9B20404A',
-                   type='koop', zone='heel-nederland',
+def get_search_url(zone, api_key='16F03929-0DB2-4FA7-8B55-182D9B20404A',
+                   type='koop',
                    page=1, page_size=25):
     """Returns a funda search url for the given arguments
 
@@ -61,7 +62,7 @@ class FundaSpider(scrapy.Spider):
         """
         self.search_args = {
             'type': kwargs.pop('type', 'koop'),
-            'zone': kwargs.pop('zone', 'heel-nederland'),
+         #   'zone': kwargs.pop('zone', 'heel-nederland'),
             'api_key': kwargs.pop('api_key',
                                   '16F03929-0DB2-4FA7-8B55-182D9B20404A')
         }
@@ -70,8 +71,23 @@ class FundaSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
 
     def start_requests(self):
+        #List of URLs for different provinces:
+        zones = [ 'provincie-utrecht',
+                  'provincie-zeeland',
+                  'provincie-groningen',
+                  'provincie-friesland',
+                  'provincie-drenthe',
+                  'provincie-overijssel',
+                  'provincie-flevoland',
+                  'provincie-gelderland',
+                  'provincie-noord-holland',
+                  'provincie-zuid-holland',
+                  'provincie-noord-brabant',
+                  'provincie-limburg' 
+                ]
         # initiate the request to the first page
-        yield self.build_page_request(1)
+        for province in zones:
+           yield self.build_page_request(1, province)
 
     def parse_detail(self, response):
         """Parses a page view of property and returns it's content and
@@ -89,6 +105,9 @@ class FundaSpider(scrapy.Spider):
         # deal with the paging
         total_pages = json_response['Paging']['AantalPaginas']
         current_page = json_response['Paging']['HuidigePagina']
+        # get the zone
+        zone_info = json_response['Paging']['VolgendeUrl']
+
 
         # iterate over all postings on the page
         for posting in json_response['Objects']:
@@ -96,14 +115,19 @@ class FundaSpider(scrapy.Spider):
             req.meta['list_posting'] = posting
             yield req
 
-        if current_page < total_pages:
-            # there still are pages left
-            yield self.build_page_request(current_page)
+        try:
+            zone = re.search('koop\/(.+?)\/', zone_info).group(1)
 
-    def build_page_request(self, page):
+            if current_page < total_pages:
+            # there still are pages left
+                yield self.build_page_request(current_page, zone)
+        except AttributeError:
+            pass
+
+    def build_page_request(self, page, province):
         """Returns the request for a given page and the spider's search
         arguments"""
-        page_url = get_search_url(page=page + 1, **self.search_args)
+        page_url = get_search_url(province, page=page + 1, **self.search_args)
         return Request(page_url)
 
     def build_detail_request(self, global_id):

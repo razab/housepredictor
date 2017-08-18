@@ -68,6 +68,16 @@ ITEM_PIPELINES = {
     'scraper.pipelines.ExtractionPipeline': 300,
  }
 
+DATABASE = {
+    'drivername': 'postgres',
+    'host': 'localhost',
+    'port': '5432',
+    'username': 'postgres',
+    'password': 'funda123',
+    'database': 'funda'
+}
+
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
 # AUTOTHROTTLE_ENABLED = True

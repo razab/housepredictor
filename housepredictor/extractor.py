@@ -108,12 +108,19 @@ KEY_NAMES = [
     'GelegenOp',
     'GlobalId',
     'Inhoud',
+    'IsSearchable',
+    'IsVerhuurd',
+    'IsVerkocht',
+    'IsVerkochtOfVerhuurd',
+    'MakelaarId',
+    'MakelaarNaam',
     'Isolatie',
     'Koopprijs',
     'Ligging',
     'PerceelOppervlakte',
     'Perceeloppervlakte',
     'PermanenteBewoning',
+    'Plaats',
     'Postcode',
     'ShortURL',
     'PublicatieDatum',
@@ -225,15 +232,24 @@ def extract_categorical(df):
 
 short_text_cols = ['VolledigeOmschrijving',
                    'Voorzieningen',
+                   'Adres',
                    'GarageVoorzieningen',
                    'SoortDak',
                    'GarageIsolatie',
                    'Ligging',
+                   'IsSearchable',
+                   'IsVerhuurd',
+                   'IsVerkocht',
+                   'IsVerkochtOfVerhuurd',
+                   'MakelaarId',
+                   'MakelaarNaam',
                    'EigendomsSituatie',
                    'SchuurBergingIsolatie',
                    'Bijzonderheden',
                    'BalkonDakterras',
                    'WarmWater',
+                   'Postcode',
+                   'Plaats',
                    'SoortWoning',
                    'Verwarming',
                    'Garage',
@@ -322,7 +338,7 @@ def sanitize_record(data_dict):
     Used by the pipeline."""
     df = extract_preliminary(pd.Series([data_dict]), KEY_NAMES)
     # sanitize it
-    return sanitize_data(df).iloc[0].to_dict()  # convert back to dict
+    return df.iloc[0].to_dict()  # convert back to dict
 
 class FeatureExtractor(BaseEstimator, TransformerMixin):
     def __init__(self, **kwargs):

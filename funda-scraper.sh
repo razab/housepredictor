@@ -5,4 +5,4 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PYTHONPATH=$PYTHONPATH:$DIR/housepredictor
 
 # pass the arguments
-housepredictor/cmd.py "$@"
+~/housepredictor/housepredictor/cmd.py "$@"
