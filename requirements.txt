@@ -4,3 +4,6 @@ scipy==0.19.1
 Scrapy==1.4.0
 click==6.7
 scikit_learn==0.19b2
+scrapy_proxies
+scrapy-fake-useragent
+psycopg2
