@@ -1,15 +1,16 @@
-# -*- coding: utf-8 -*-
 import json
+import sys
 
 import scrapy
 from scrapy import Request
-import re
+import codecs
+import timeit
 
 #from housepredictor.scraper.items import FundaItem
 
 
-def get_search_url(zone, api_key='16F03929-0DB2-4FA7-8B55-182D9B20404A',
-                   type='koop',
+def get_search_url(api_key='16F03929-0DB2-4FA7-8B55-182D9B20404A',
+                   type='koop', zone='heel-nederland',
                    page=1, page_size=25):
     """Returns a funda search url for the given arguments
 
@@ -20,7 +21,7 @@ def get_search_url(zone, api_key='16F03929-0DB2-4FA7-8B55-182D9B20404A',
     :param zone: the zone to search. default
     :param page: the result page
     :param page_size: the size of the pages, currently the maximum is 25"""
-    url_template = 'http://partnerapi.funda.nl/feeds/Aanbod.svc/{' \
+    url_template = 'http://partnerapi.funda.nl/feeds/Aanbod.svc/json/{' \
                    'api_key}/?type={type}&zo={query}&page={' \
                    'page}&page_size={page_size}&website=funda'
     query = '/{zone}/'.format(zone=zone)
@@ -62,7 +63,7 @@ class FundaSpider(scrapy.Spider):
         """
         self.search_args = {
             'type': kwargs.pop('type', 'koop'),
-         #   'zone': kwargs.pop('zone', 'heel-nederland'),
+            'zone': kwargs.pop('zone', 'heel-nederland'),
             'api_key': kwargs.pop('api_key',
                                   '16F03929-0DB2-4FA7-8B55-182D9B20404A')
         }
@@ -71,30 +72,20 @@ class FundaSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
 
     def start_requests(self):
-        #List of URLs for different provinces:
-        zones = [ 'provincie-utrecht',
-                  'provincie-zeeland',
-                  'provincie-groningen',
-                  'provincie-friesland',
-                  'provincie-drenthe',
-                  'provincie-overijssel',
-                  'provincie-flevoland',
-                  'provincie-gelderland',
-                  'provincie-noord-holland',
-                  'provincie-zuid-holland',
-                  'provincie-noord-brabant',
-                  'provincie-limburg' 
-                ]
         # initiate the request to the first page
-        for province in zones:
-           yield self.build_page_request(1, province)
+        yield self.build_page_request(1)
 
     def parse_detail(self, response):
         """Parses a page view of property and returns it's content and
         the list data received through the meta"""
+
+        start_time = timeit.default_timer()
+
         posting = response.meta['list_posting']
         json_response = json.loads(response.body_as_unicode())  # parse json
         posting.update(json_response)
+        
+
 
         # data is fairly consistent across the api so no
         # scrpy items are fairly redundant
@@ -105,29 +96,21 @@ class FundaSpider(scrapy.Spider):
         # deal with the paging
         total_pages = json_response['Paging']['AantalPaginas']
         current_page = json_response['Paging']['HuidigePagina']
-        # get the zone
-        zone_info = json_response['Paging']['VolgendeUrl']
-
 
         # iterate over all postings on the page
         for posting in json_response['Objects']:
-            req = self.build_detail_request(posting['GlobalId'])
+            req = self.build_detail_request(posting['GlobalId']) #
             req.meta['list_posting'] = posting
             yield req
 
-        try:
-            zone = re.search('koop\/(.+?)\/', zone_info).group(1)
-
-            if current_page < total_pages:
+        if current_page < total_pages:
             # there still are pages left
-                yield self.build_page_request(current_page, zone)
-        except AttributeError:
-            pass
+            yield self.build_page_request(current_page)
 
-    def build_page_request(self, page, province):
+    def build_page_request(self, page):
         """Returns the request for a given page and the spider's search
         arguments"""
-        page_url = get_search_url(province, page=page + 1, **self.search_args)
+        page_url = get_search_url(page=page + 1, **self.search_args)
         return Request(page_url)
 
     def build_detail_request(self, global_id):
@@ -136,5 +119,6 @@ class FundaSpider(scrapy.Spider):
         detail_url = get_detail_url(listing_id=global_id,
                                     type=self.search_args['type'],
                                     api_key=self.search_args['api_key'])
+
         return Request(detail_url,
                        callback=self.parse_detail)
